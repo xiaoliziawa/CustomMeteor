@@ -19,7 +19,14 @@ import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import appeng.worldgen.meteorite.MeteoriteBlockPutter;
 import appeng.worldgen.meteorite.MeteoritePlacer;
 import appeng.worldgen.meteorite.PlacedMeteoriteSettings;
+import appeng.worldgen.meteorite.CraterType;
+import appeng.worldgen.meteorite.fallout.Fallout;
+import appeng.worldgen.meteorite.fallout.FalloutCopy;
+import appeng.worldgen.meteorite.fallout.FalloutMode;
+import appeng.worldgen.meteorite.fallout.FalloutSand;
+import appeng.worldgen.meteorite.fallout.FalloutSnow;
 import com.lirxowo.custommeteor.config.CustomMeteorConfig;
+import com.lirxowo.custommeteor.kubejs.KubeJSMeteorTerrainHooks;
 import com.lirxowo.custommeteor.worldgen.KubeJSMeteorPalette;
 import com.lirxowo.custommeteor.worldgen.KubeJSMeteoritePlacer;
 import com.lirxowo.custommeteor.worldgen.MeteorTemplatePlacer;
@@ -56,6 +63,12 @@ public class MeteorPlacerMixin {
 
     @Shadow
     @Final
+    @Mutable
+    @SuppressWarnings("remap")
+    private Fallout type;
+
+    @Shadow
+    @Final
     @SuppressWarnings("remap")
     private int x;
 
@@ -73,6 +86,24 @@ public class MeteorPlacerMixin {
     @Final
     @SuppressWarnings("remap")
     private double squaredMeteoriteSize;
+
+    @Shadow
+    @Final
+    @Mutable
+    @SuppressWarnings("remap")
+    private CraterType craterType;
+
+    @Shadow
+    @Final
+    @Mutable
+    @SuppressWarnings("remap")
+    private boolean pureCrater;
+
+    @Shadow
+    @Final
+    @Mutable
+    @SuppressWarnings("remap")
+    private boolean craterLake;
 
     @Shadow
     @Final
@@ -112,6 +143,13 @@ public class MeteorPlacerMixin {
         if (shellEntry != null) {
             this.skyStone = shellEntry.state();
         }
+
+        var overrides = KubeJSMeteorTerrainHooks.apply(level, pos, craterType, settings.getFallout(), pureCrater,
+                craterLake);
+        this.craterType = overrides.craterType();
+        this.pureCrater = overrides.pureCrater();
+        this.craterLake = overrides.craterLake();
+        this.type = createFallout(overrides.falloutMode());
     }
 
     @Inject(method = "placeMeteoriteSkyStone", at = @At("HEAD"), cancellable = true, remap = false)
@@ -129,5 +167,14 @@ public class MeteorPlacerMixin {
                 ci.cancel();
             }
         }
+    }
+
+    private Fallout createFallout(FalloutMode mode) {
+        return switch (mode) {
+            case SAND -> new FalloutSand(level, pos, putter, skyStone, random);
+            case TERRACOTTA -> new FalloutCopy(level, pos, putter, skyStone, random);
+            case ICE_SNOW -> new FalloutSnow(level, pos, putter, skyStone, random);
+            default -> new Fallout(putter, skyStone, random);
+        };
     }
 }

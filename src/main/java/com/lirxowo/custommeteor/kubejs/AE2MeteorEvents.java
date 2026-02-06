@@ -6,4 +6,5 @@ import dev.latvian.mods.kubejs.event.EventHandler;
 public interface AE2MeteorEvents {
     EventGroup GROUP = EventGroup.of("AE2MeteorEvent");
     EventHandler CREATE = GROUP.startup("create", () -> AE2MeteorEventJS.class);
+    EventHandler TERRAIN = GROUP.startup("terrain", () -> AE2MeteorTerrainEventJS.class);
 }

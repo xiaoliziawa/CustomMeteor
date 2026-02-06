@@ -1,0 +1,38 @@
+package com.lirxowo.custommeteor.mixin;
+
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Redirect;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.levelgen.structure.Structure.GenerationContext;
+import net.minecraft.world.level.levelgen.structure.pieces.StructurePiecesBuilder;
+
+import appeng.worldgen.meteorite.CraterType;
+import appeng.worldgen.meteorite.MeteoriteStructure;
+import appeng.worldgen.meteorite.fallout.FalloutMode;
+import com.lirxowo.custommeteor.config.CustomMeteorConfig;
+import com.lirxowo.custommeteor.kubejs.KubeJSMeteorTerrainHooks;
+import com.lirxowo.custommeteor.mixin.accessor.MeteoriteStructurePieceInvoker;
+import net.minecraftforge.fml.ModList;
+
+@Mixin(value = MeteoriteStructure.class, remap = false)
+public class MeteoriteStructureMixin {
+    @Redirect(method = "generatePieces", remap = false, at = @At(value = "NEW",
+            target = "Lappeng/worldgen/meteorite/MeteoriteStructurePiece;"))
+    private static appeng.worldgen.meteorite.MeteoriteStructurePiece custommeteor$kubejsTerrain(BlockPos pos,
+            float meteoriteRadius, CraterType craterType, FalloutMode falloutMode, boolean pureCrater,
+            boolean craterLake, StructurePiecesBuilder piecesBuilder, GenerationContext context) {
+        if (CustomMeteorConfig.meteoriteMode() == CustomMeteorConfig.MeteoriteMode.KUBEJS
+                && ModList.get().isLoaded("kubejs")) {
+            var overrides = KubeJSMeteorTerrainHooks.apply(context, pos, craterType, falloutMode, pureCrater,
+                    craterLake);
+            craterType = overrides.craterType();
+            falloutMode = overrides.falloutMode();
+            pureCrater = overrides.pureCrater();
+            craterLake = overrides.craterLake();
+        }
+        return MeteoriteStructurePieceInvoker.custommeteor$init(pos, meteoriteRadius, craterType, falloutMode,
+                pureCrater, craterLake);
+    }
+}

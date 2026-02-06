@@ -5,7 +5,9 @@
   "compatibilityLevel": "JAVA_17",
   "refmap": "custommeteor.refmap.json",
   "mixins": [
-    "MeteorPlacerMixin"
+    "MeteorPlacerMixin",
+    "MeteoriteStructureMixin",
+    "accessor.MeteoriteStructurePieceInvoker"
   ],
   "client": [
   ],
