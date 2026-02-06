@@ -45,36 +45,36 @@ public class AE2MeteorEventJS extends EventJS {
         buds.clear();
     }
 
-    public void shell(String blockId) {
-        shell(blockId, 1);
+    public void shell(Block block) {
+        shell(block, 1);
     }
 
-    public void shell(String blockId, int weight) {
-        addBlock(shell, blockId, weight, true, "shell");
+    public void shell(Block block, int weight) {
+        addBlock(shell, block, weight, true, "shell");
     }
 
-    public void core(String blockId) {
-        core(blockId, 1);
+    public void core(Block block) {
+        core(block, 1);
     }
 
-    public void core(String blockId, int weight) {
-        addBlock(core, blockId, weight, true, "core");
+    public void core(Block block, int weight) {
+        addBlock(core, block, weight, true, "core");
     }
 
-    public void coreNoBud(String blockId) {
-        coreNoBud(blockId, 1);
+    public void coreNoBud(Block block) {
+        coreNoBud(block, 1);
     }
 
-    public void coreNoBud(String blockId, int weight) {
-        addBlock(core, blockId, weight, false, "core");
+    public void coreNoBud(Block block, int weight) {
+        addBlock(core, block, weight, false, "core");
     }
 
-    public void buds(String blockId) {
-        buds(blockId, 1);
+    public void buds(Block block) {
+        buds(block, 1);
     }
 
-    public void buds(String blockId, int weight) {
-        addBlock(buds, blockId, weight, true, "buds");
+    public void buds(Block block, int weight) {
+        addBlock(buds, block, weight, true, "buds");
     }
 
     public void budChance(double chance) {
