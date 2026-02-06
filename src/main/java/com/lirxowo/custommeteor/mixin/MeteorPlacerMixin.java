@@ -149,7 +149,7 @@ public class MeteorPlacerMixin {
         this.craterType = overrides.craterType();
         this.pureCrater = overrides.pureCrater();
         this.craterLake = overrides.craterLake();
-        this.type = createFallout(overrides.falloutMode());
+        this.type = customMeteorite$createFallout(overrides.falloutMode());
     }
 
     @Inject(method = "placeMeteoriteSkyStone", at = @At("HEAD"), cancellable = true, remap = false)
@@ -169,7 +169,7 @@ public class MeteorPlacerMixin {
         }
     }
 
-    private Fallout createFallout(FalloutMode mode) {
+    private Fallout customMeteorite$createFallout(FalloutMode mode) {
         return switch (mode) {
             case SAND -> new FalloutSand(level, pos, putter, skyStone, random);
             case TERRACOTTA -> new FalloutCopy(level, pos, putter, skyStone, random);
