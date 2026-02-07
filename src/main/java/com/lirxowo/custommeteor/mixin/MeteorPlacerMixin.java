@@ -1,7 +1,5 @@
 package com.lirxowo.custommeteor.mixin;
 
-import java.util.List;
-
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Mutable;
@@ -26,6 +24,7 @@ import appeng.worldgen.meteorite.fallout.FalloutMode;
 import appeng.worldgen.meteorite.fallout.FalloutSand;
 import appeng.worldgen.meteorite.fallout.FalloutSnow;
 import com.lirxowo.custommeteor.config.CustomMeteorConfig;
+import com.lirxowo.custommeteor.config.MeteorPaletteConfig;
 import com.lirxowo.custommeteor.kubejs.KubeJSMeteorTerrainHooks;
 import com.lirxowo.custommeteor.worldgen.KubeJSMeteorPalette;
 import com.lirxowo.custommeteor.worldgen.KubeJSMeteoritePlacer;
@@ -111,33 +110,29 @@ public class MeteorPlacerMixin {
     @SuppressWarnings("remap")
     private BlockState skyStone;
 
-    @Shadow
-    @Final
-    @Mutable
-    @SuppressWarnings("remap")
-    private List<BlockState> quartzBlocks;
-
-    @Shadow
-    @Final
-    @Mutable
-    @SuppressWarnings("remap")
-    private List<BlockState> quartzBuds;
-
     @Inject(method = "<init>", at = @At("TAIL"), remap = false)
     private void custommeteor$applyPalette(LevelAccessor level, PlacedMeteoriteSettings settings,
             BoundingBox boundingBox, RandomSource random, CallbackInfo ci) {
         CustomMeteorConfig.MeteoriteMode mode = CustomMeteorConfig.meteoriteMode();
         if (mode == CustomMeteorConfig.MeteoriteMode.PALETTE) {
-            MeteorPalette.Palette palette = MeteorPalette.resolve(random);
-            this.skyStone = palette.shell();
-            this.quartzBlocks = palette.core();
-            this.quartzBuds = palette.buds();
+            MeteorPaletteConfig.Data config = MeteorPaletteConfig.get();
+            WeightedPalette palette = MeteorPalette.resolve();
+            WeightedBlockList.Entry shellEntry = palette.shell().getFirstEntry();
+            if (shellEntry != null) {
+                this.skyStone = shellEntry.state();
+            }
+            if (config.craterType() != null) {
+                this.craterType = config.craterType();
+            }
+            FalloutMode falloutMode = config.falloutMode() != null ? config.falloutMode() : settings.getFallout();
+            this.type = customMeteorite$createFallout(falloutMode);
             return;
         }
 
         if (mode != CustomMeteorConfig.MeteoriteMode.KUBEJS) {
             return;
         }
+
         WeightedPalette palette = KubeJSMeteorPalette.get();
         WeightedBlockList.Entry shellEntry = palette.shell().getFirstEntry();
         if (shellEntry != null) {
@@ -160,6 +155,16 @@ public class MeteorPlacerMixin {
             ci.cancel();
             return;
         }
+
+        if (mode == CustomMeteorConfig.MeteoriteMode.PALETTE) {
+            WeightedPalette palette = MeteorPalette.resolve();
+            if (KubeJSMeteoritePlacer.place(level, random, boundingBox, putter, x, y, z, squaredMeteoriteSize,
+                    palette)) {
+                ci.cancel();
+                return;
+            }
+        }
+
         if (mode == CustomMeteorConfig.MeteoriteMode.KUBEJS) {
             WeightedPalette palette = KubeJSMeteorPalette.get();
             if (KubeJSMeteoritePlacer.place(level, random, boundingBox, putter, x, y, z, squaredMeteoriteSize,

@@ -1,6 +1,5 @@
 package com.lirxowo.custommeteor.worldgen;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -11,12 +10,10 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
-import appeng.core.definitions.AEBlocks;
 import com.lirxowo.custommeteor.config.MeteorPaletteConfig;
 import org.slf4j.Logger;
 
@@ -32,74 +29,98 @@ public final class MeteorPalette {
     private MeteorPalette() {
     }
 
-    public static Palette resolve(RandomSource random) {
+    public static WeightedPalette resolve() {
         MeteorPaletteConfig.Data config = MeteorPaletteConfig.get();
+        WeightedPalette defaults = KubeJSMeteorPalette.defaultPalette();
 
-        List<BlockState> shellOptions = statesFromConfig(config.shell());
-        if (shellOptions.isEmpty()) {
-            shellOptions = tagStates(SHELL_TAG);
+        WeightedBlockList shell = buildFromConfig(config.shell(), true, false, "shell");
+        if (shell.isEmpty()) {
+            shell = buildFromTag(SHELL_TAG, true, false);
         }
-        if (shellOptions.isEmpty()) {
-            shellOptions = List.of(AEBlocks.SKY_STONE_BLOCK.block().defaultBlockState());
-        }
-
-        List<BlockState> coreBlocks = statesFromConfig(config.core());
-        if (coreBlocks.isEmpty()) {
-            coreBlocks = tagStates(CORE_TAG);
-        }
-        if (coreBlocks.isEmpty()) {
-            coreBlocks = List.of(
-                    AEBlocks.QUARTZ_BLOCK.block().defaultBlockState(),
-                    AEBlocks.DAMAGED_BUDDING_QUARTZ.block().defaultBlockState(),
-                    AEBlocks.CHIPPED_BUDDING_QUARTZ.block().defaultBlockState(),
-                    AEBlocks.FLAWED_BUDDING_QUARTZ.block().defaultBlockState(),
-                    AEBlocks.FLAWLESS_BUDDING_QUARTZ.block().defaultBlockState());
+        if (shell.isEmpty()) {
+            shell = defaults.shell().copy();
         }
 
-        List<BlockState> budBlocks = statesFromConfig(config.buds()).stream()
-                .map(MeteorPalette::withFacingUp)
-                .collect(Collectors.toList());
-        if (budBlocks.isEmpty()) {
-            budBlocks = tagStates(BUDS_TAG).stream()
-                    .map(MeteorPalette::withFacingUp)
-                    .collect(Collectors.toList());
+        WeightedBlockList core = new WeightedBlockList();
+        addConfigEntries(core, config.coreNoBud(), false, false, "coreNoBud");
+        addConfigEntries(core, config.core(), true, false, "core");
+
+        if (core.isEmpty()) {
+            addCoreTagFallback(core);
         }
-        if (budBlocks.isEmpty()) {
-            budBlocks = List.of(
-                    withFacingUp(AEBlocks.SMALL_QUARTZ_BUD.block().defaultBlockState()),
-                    withFacingUp(AEBlocks.MEDIUM_QUARTZ_BUD.block().defaultBlockState()),
-                    withFacingUp(AEBlocks.LARGE_QUARTZ_BUD.block().defaultBlockState()));
+        if (core.isEmpty()) {
+            core = defaults.core().copy();
         }
 
-        BlockState shell = shellOptions.get(random.nextInt(shellOptions.size()));
-        return new Palette(shell, coreBlocks, budBlocks);
+        WeightedBlockList buds = buildFromConfig(config.buds(), true, true, "buds");
+        if (buds.isEmpty()) {
+            buds = buildFromTag(BUDS_TAG, true, true);
+        }
+        if (buds.isEmpty()) {
+            buds = defaults.buds().copy();
+        }
+
+        return new WeightedPalette(shell.copy(), core.copy(), buds.copy(), config.budChance());
     }
 
-    private static List<BlockState> statesFromConfig(List<String> entries) {
+    private static WeightedBlockList buildFromConfig(List<MeteorPaletteConfig.Entry> entries, boolean allowBud,
+            boolean forceFacingUp, String section) {
+        WeightedBlockList list = new WeightedBlockList();
+        addConfigEntries(list, entries, allowBud, forceFacingUp, section);
+        return list;
+    }
+
+    private static void addConfigEntries(WeightedBlockList list, List<MeteorPaletteConfig.Entry> entries,
+            boolean allowBud, boolean forceFacingUp, String section) {
         if (entries == null || entries.isEmpty()) {
-            return List.of();
+            return;
         }
-        List<BlockState> states = new ArrayList<>();
-        for (String entry : entries) {
-            if (entry == null || entry.isBlank()) {
+
+        for (MeteorPaletteConfig.Entry entry : entries) {
+            if (entry == null || entry.id() == null || entry.id().isBlank()) {
                 continue;
             }
-            ResourceLocation id = ResourceLocation.tryParse(entry);
+
+            ResourceLocation id = ResourceLocation.tryParse(entry.id().trim());
             if (id == null) {
-                LOGGER.warn("Invalid block id in meteorite palette config: {}", entry);
+                LOGGER.warn("Invalid block id in meteorite palette {} section: {}", section, entry.id());
                 continue;
             }
+
             if (!BuiltInRegistries.BLOCK.containsKey(id)) {
-                LOGGER.warn("Unknown block id in meteorite palette config: {}", entry);
+                LOGGER.warn("Unknown block id in meteorite palette {} section: {}", section, entry.id());
                 continue;
             }
-            Block block = BuiltInRegistries.BLOCK.get(id);
-            BlockState state = block.defaultBlockState();
-            if (!state.isAir()) {
-                states.add(state);
+
+            BlockState state = BuiltInRegistries.BLOCK.get(id).defaultBlockState();
+            if (state.isAir()) {
+                continue;
             }
+
+            if (forceFacingUp) {
+                state = withFacingUp(state);
+            }
+
+            list.add(state, entry.weight(), allowBud);
         }
-        return states;
+    }
+
+    private static WeightedBlockList buildFromTag(TagKey<Block> tag, boolean allowBud, boolean forceFacingUp) {
+        WeightedBlockList list = new WeightedBlockList();
+        for (BlockState state : tagStates(tag)) {
+            BlockState toAdd = forceFacingUp ? withFacingUp(state) : state;
+            list.add(toAdd, 1, allowBud);
+        }
+        return list;
+    }
+
+    private static void addCoreTagFallback(WeightedBlockList list) {
+        List<BlockState> states = tagStates(CORE_TAG);
+        boolean first = true;
+        for (BlockState state : states) {
+            list.add(state, 1, !first);
+            first = false;
+        }
     }
 
     private static List<BlockState> tagStates(TagKey<Block> tag) {
@@ -116,8 +137,5 @@ public final class MeteorPalette {
             return state.setValue(BlockStateProperties.FACING, Direction.UP);
         }
         return state;
-    }
-
-    public record Palette(BlockState shell, List<BlockState> core, List<BlockState> buds) {
     }
 }

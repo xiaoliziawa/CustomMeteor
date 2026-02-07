@@ -22,9 +22,20 @@ mode = "PALETTE"
 
 JSON 字段含义：
 
-- `shell`：陨石外壳（天陨石主体）。
-- `core`：中心小空腔中的方块（赛特斯石英/母岩）。
-- `buds`：生成在核心方块上方的芽（自动朝上；中心空腔 70% 概率）。
+- `shell`：陨石外壳（天陨石主体，支持权重）。
+- `core`：允许长芽的核心方块（支持权重）。
+- `coreNoBud`：不会长芽的核心方块（支持权重）。
+- `buds`：芽方块（自动朝上，支持权重）。
+- `budChance`：核心方块上方生成芽的概率（0.0-1.0）。
+- `craterType`：可选，覆盖陨石坑类型（与 KubeJS 地形事件同枚举）。
+- `falloutMode`：可选，覆盖坠落地形模式（与 KubeJS 地形事件同枚举）。
+- `pureCrater`：可选，`true` 保留坑内填充不被坍塌覆盖；`false` 禁用该行为。
+- `craterLake`：可选，`true` 强制生成水坑；`false` 禁用水坑。
+
+权重写法：
+
+- 推荐对象格式：`{ "id": "modid:block", "weight": 8 }`
+- 兼容旧写法：`"modid:block"`（默认 `weight = 1`）
 
 如果列表为空或包含无效 ID，会回退到以下标签：
 
@@ -39,20 +50,26 @@ JSON 字段含义：
 ```json
 {
   "shell": [
-    "ae2:sky_stone_block"
+    { "id": "ae2:sky_stone_block", "weight": 8 },
+    { "id": "minecraft:deepslate", "weight": 2 }
   ],
   "core": [
-    "ae2:quartz_block",
-    "ae2:damaged_budding_quartz",
-    "ae2:chipped_budding_quartz",
-    "ae2:flawed_budding_quartz",
-    "ae2:flawless_budding_quartz"
+    { "id": "ae2:flawless_budding_quartz", "weight": 1 },
+    { "id": "ae2:flawed_budding_quartz", "weight": 2 }
+  ],
+  "coreNoBud": [
+    { "id": "ae2:quartz_block", "weight": 4 }
   ],
   "buds": [
-    "ae2:small_quartz_bud",
-    "ae2:medium_quartz_bud",
-    "ae2:large_quartz_bud"
-  ]
+    { "id": "ae2:small_quartz_bud", "weight": 3 },
+    { "id": "ae2:medium_quartz_bud", "weight": 2 },
+    { "id": "ae2:large_quartz_bud", "weight": 1 }
+  ],
+  "budChance": 0.7,
+  "craterType": "NORMAL",
+  "falloutMode": "SAND",
+  "pureCrater": true,
+  "craterLake": false
 }
 ```
 
@@ -151,10 +168,6 @@ FalloutMode 取值：
 - `TERRACOTTA`：红土地形坠落（陶瓦为主）。
 - `ICE_SNOW`：冰雪地形坠落。
 - `NONE`：不做坠落改造（建议配合 `craterType("NONE")`）。
-
-已知限制：
-- 同一条规则里同时设置 `craterType(...)` 与 `falloutMode(...)` 时，仅能保证 `falloutMode` 生效。
-  如果需要固定坑内填充，请只设置 `craterType`，并避免在该规则里设置 `falloutMode`。
 
 ## 注意事项
 

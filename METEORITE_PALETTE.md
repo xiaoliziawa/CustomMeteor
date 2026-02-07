@@ -3,12 +3,12 @@
 This mod supports three meteorite generation modes:
 
 - `TEMPLATE`: use `custommeteor:ae2_meteorite` structure template if present.
-- `PALETTE`: use JSON/tag palette to pick blocks.
+- `PALETTE`: use JSON/tag palette with weighted entries.
 - `KUBEJS`: use KubeJS startup scripts with weighted probabilities.
 
 Set the mode here:
 
-```
+```toml
 config/custommeteor-common.toml
 [meteorite]
 mode = "PALETTE"
@@ -16,56 +16,104 @@ mode = "PALETTE"
 
 ## Palette JSON (PALETTE mode)
 
-The JSON file is auto-created after the first game/server start:
+The JSON file is auto-created after first startup:
 
 - `config/custommeteor/meteorite_palette.json`
 
-The JSON controls which blocks are used for different parts of the meteorite:
+PALETTE mode now uses the same placement logic as KubeJS mode:
 
-- `shell`: The outer shell of the meteorite (the skystone body).
-- `core`: Blocks used inside the small center chamber (budding quartz / quartz blocks).
-- `buds`: Bud blocks placed on top of core blocks (placed facing up; 70% chance in the center chamber).
+- weighted `shell`
+- weighted `core` (allows buds)
+- weighted `coreNoBud` (never grows buds)
+- weighted `buds`
+- configurable `budChance`
+- optional `craterType` / `falloutMode` overrides
 
-If a list is empty or contains invalid IDs, the mod falls back to the block tags:
+### JSON format
+
+Use object entries with explicit weight:
+
+```json
+{ "id": "ae2:sky_stone_block", "weight": 8 }
+```
+
+If `weight` is omitted, it defaults to `1`.
+
+Full example:
+
+```json
+{
+  "shell": [
+    { "id": "ae2:sky_stone_block", "weight": 8 },
+    { "id": "minecraft:deepslate", "weight": 2 }
+  ],
+  "core": [
+    { "id": "ae2:flawless_budding_quartz", "weight": 1 },
+    { "id": "ae2:flawed_budding_quartz", "weight": 2 }
+  ],
+  "coreNoBud": [
+    { "id": "ae2:quartz_block", "weight": 4 }
+  ],
+  "buds": [
+    { "id": "ae2:small_quartz_bud", "weight": 3 },
+    { "id": "ae2:medium_quartz_bud", "weight": 2 },
+    { "id": "ae2:large_quartz_bud", "weight": 1 }
+  ],
+  "budChance": 0.7,
+  "craterType": "NORMAL",
+  "falloutMode": "SAND",
+  "pureCrater": true,
+  "craterLake": false
+}
+```
+
+### Fallback rules
+
+If a section is empty or has invalid IDs, the mod falls back to tags:
 
 - `custommeteor:meteorite_shell`
 - `custommeteor:meteorite_core`
 - `custommeteor:meteorite_buds`
 
-If those tags are also empty, it falls back to AE2 defaults.
+If tags are also empty, it falls back to AE2 defaults.
 
-### Example JSON
+Legacy compatibility:
 
-```json
-{
-  "shell": [
-    "ae2:sky_stone_block"
-  ],
-  "core": [
-    "ae2:quartz_block",
-    "ae2:damaged_budding_quartz",
-    "ae2:chipped_budding_quartz",
-    "ae2:flawed_budding_quartz",
-    "ae2:flawless_budding_quartz"
-  ],
-  "buds": [
-    "ae2:small_quartz_bud",
-    "ae2:medium_quartz_bud",
-    "ae2:large_quartz_bud"
-  ]
-}
-```
+- Old `core` string-only arrays are still supported.
+- If `coreNoBud` is missing and legacy `core` is used, the first `core` entry is treated as `coreNoBud`.
+
+### Optional terrain fields in JSON
+
+You can define terrain behavior directly in `meteorite_palette.json`:
+
+- `"craterType": "NORMAL"`
+- `"falloutMode": "SAND"`
+- `"pureCrater": true`
+- `"craterLake": false`
+
+These use the same enum names as the KubeJS terrain event.
+
+`craterType` values:
+
+- `NONE`, `NORMAL`, `LAVA`, `OBSIDIAN`, `WATER`, `SNOW`, `ICE`
+
+`falloutMode` values:
+
+- `NONE`, `DEFAULT`, `SAND`, `TERRACOTTA`, `ICE_SNOW`
+
+`pureCrater` / `craterLake` values:
+
+- `true` or `false`
+- Use `null` or omit the field to keep AE2 defaults
 
 ## KubeJS (KUBEJS mode)
 
-When `mode = "KUBEJS"`, the JSON and tags are ignored. Instead, define the
-meteorite palette in a startup script:
+When `mode = "KUBEJS"`, JSON and tags are ignored.
 
 Path: `kubejs/startup_scripts/ae2_meteor.js`
 
 ```js
 AE2MeteorEvent.create(event => {
-  // weights for shell/core/buds
   event.shell('ae2:sky_stone_block', 8)
   event.shell('minecraft:deepslate', 2)
 
@@ -82,83 +130,37 @@ AE2MeteorEvent.create(event => {
 
 ### Event API reference
 
-All methods below accept `blockId` as a string (`"modid:block"`).
 `weight` is a relative probability (higher = more common).
 
 - `event.shell(blockId, weight = 1)`
-  - Adds a shell block candidate. Each shell position is rolled independently.
 - `event.core(blockId, weight = 1)`
-  - Adds a core block candidate and allows buds to spawn above it.
 - `event.coreNoBud(blockId, weight = 1)`
-  - Adds a core block candidate that will **not** spawn buds above it.
 - `event.buds(blockId, weight = 1)`
-  - Adds a bud block candidate. Buds are auto-oriented upward.
 - `event.budChance(chance)`
-  - Chance (0.0-1.0) to place a bud above a core block that allows buds.
 - `event.clearShell()`, `event.clearCore()`, `event.clearBuds()`, `event.clearAll()`
-  - Clears the corresponding list so you can fully replace defaults.
 
-Notes:
-- `coreNoBud` marks a core block as "no bud allowed".
-- All lists are weighted; higher numbers = higher probability.
-- Keep `ae2:sky_stone_block` in `shell` so AE2 compass can still track meteors.
-
-### Terrain/crater overrides (biome-aware)
-
-You can also override crater/fallout behavior with a second event:
+## Terrain/crater overrides (biome-aware)
 
 ```js
 AE2MeteorEvent.terrain(event => {
-  // Use biome id or tag checks
   if (event.isBiome('minecraft:desert') || event.isBiome('#forge:is_sandy')) {
-    event.falloutMode('SAND') // enables glass in sand fallout
+    event.falloutMode('SAND')
     event.craterType('NORMAL')
   }
-
-  // Example for modded biome
-  if (event.isBiome('modid:volcanic_wastes')) {
-    event.craterType('LAVA')
-    event.falloutMode('DEFAULT')
-  }
-
-  // Optional toggles
-  // event.pureCrater(true)
-  // event.craterLake(false)
 })
 ```
 
 Terrain event API:
 
-- `event.biomeId()` -> string id of the biome.
-- `event.isBiome(idOrTag)` -> check biome by id (`"modid:biome"`) or tag (`"#forge:is_sandy"`).
-- `event.craterType(value)` -> controls the **crater interior**, not the meteor shell.
-- `event.falloutMode(value)` -> controls the **surrounding terrain fallout** around the crater.
-- `event.pureCrater(boolean)` -> keep crater filler blocks from decay.
-- `event.craterLake(boolean)` -> force water lake filling after crater.
-
-CraterType values:
-
-- `NONE`: no crater excavation at all.
-- `NORMAL`: normal crater (carved air).
-- `LAVA`: crater filled with lava.
-- `OBSIDIAN`: crater filled with obsidian.
-- `WATER`: crater lake filled with water.
-- `SNOW`: crater filled with snow blocks.
-- `ICE`: crater filled with ice.
-
-FalloutMode values:
-
-- `DEFAULT`: standard rubble mix (stone/cobble/dirt/gravel).
-- `SAND`: sandy fallout, may add glass.
-- `TERRACOTTA`: badlands-style fallout (terracotta mix).
-- `ICE_SNOW`: snowy fallout with snow/ice patches.
-- `NONE`: intended for no fallout (use with `craterType("NONE")`).
-
-Known limitation:
-- When `craterType(...)` and `falloutMode(...)` are both set in the same biome rule, only `falloutMode` is guaranteed
-  to take effect. If you need a specific crater fill, prefer using only `craterType` and avoid `falloutMode` in that rule.
+- `event.biomeId()`
+- `event.isBiome(idOrTag)`
+- `event.craterType(value)`
+- `event.falloutMode(value)`
+- `event.pureCrater(boolean)`
+- `event.craterLake(boolean)`
 
 ## Notes
 
+- Keep `ae2:sky_stone_block` in shell entries so AE2 compass can still track meteors.
 - Changes require a restart to take effect.
-- `TEMPLATE` mode ignores both JSON and KubeJS.
+- `TEMPLATE` mode ignores JSON and KubeJS.

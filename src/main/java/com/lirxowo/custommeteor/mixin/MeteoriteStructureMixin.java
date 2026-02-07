@@ -12,6 +12,7 @@ import appeng.worldgen.meteorite.CraterType;
 import appeng.worldgen.meteorite.MeteoriteStructure;
 import appeng.worldgen.meteorite.fallout.FalloutMode;
 import com.lirxowo.custommeteor.config.CustomMeteorConfig;
+import com.lirxowo.custommeteor.config.MeteorPaletteConfig;
 import com.lirxowo.custommeteor.kubejs.KubeJSMeteorTerrainHooks;
 import com.lirxowo.custommeteor.mixin.accessor.MeteoriteStructurePieceInvoker;
 import net.minecraftforge.fml.ModList;
@@ -23,14 +24,28 @@ public class MeteoriteStructureMixin {
     private static appeng.worldgen.meteorite.MeteoriteStructurePiece custommeteor$kubejsTerrain(BlockPos pos,
             float meteoriteRadius, CraterType craterType, FalloutMode falloutMode, boolean pureCrater,
             boolean craterLake, StructurePiecesBuilder piecesBuilder, GenerationContext context) {
-        if (CustomMeteorConfig.meteoriteMode() == CustomMeteorConfig.MeteoriteMode.KUBEJS
-                && ModList.get().isLoaded("kubejs")) {
+        CustomMeteorConfig.MeteoriteMode mode = CustomMeteorConfig.meteoriteMode();
+        if (mode == CustomMeteorConfig.MeteoriteMode.KUBEJS && ModList.get().isLoaded("kubejs")) {
             var overrides = KubeJSMeteorTerrainHooks.apply(context, pos, craterType, falloutMode, pureCrater,
                     craterLake);
             craterType = overrides.craterType();
             falloutMode = overrides.falloutMode();
             pureCrater = overrides.pureCrater();
             craterLake = overrides.craterLake();
+        } else if (mode == CustomMeteorConfig.MeteoriteMode.PALETTE) {
+            var config = MeteorPaletteConfig.get();
+            if (config.craterType() != null) {
+                craterType = config.craterType();
+            }
+            if (config.falloutMode() != null) {
+                falloutMode = config.falloutMode();
+            }
+            if (config.pureCrater() != null) {
+                pureCrater = config.pureCrater();
+            }
+            if (config.craterLake() != null) {
+                craterLake = config.craterLake();
+            }
         }
         return MeteoriteStructurePieceInvoker.custommeteor$init(pos, meteoriteRadius, craterType, falloutMode,
                 pureCrater, craterLake);
