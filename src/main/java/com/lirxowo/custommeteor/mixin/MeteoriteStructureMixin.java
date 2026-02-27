@@ -1,16 +1,13 @@
 package com.lirxowo.custommeteor.mixin;
 
-import java.util.Optional;
-
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.levelgen.structure.Structure.GenerationContext;
-import net.minecraft.world.level.levelgen.structure.Structure.GenerationStub;
 import net.minecraft.world.level.levelgen.structure.pieces.StructurePiecesBuilder;
 
 import appeng.worldgen.meteorite.CraterType;
@@ -24,11 +21,11 @@ import net.minecraftforge.fml.ModList;
 
 @Mixin(value = MeteoriteStructure.class, remap = false)
 public class MeteoriteStructureMixin {
-    @Inject(method = "findGenerationPoint", at = @At("HEAD"), cancellable = true)
-    private void custommeteor$disableVanillaMeteorite(GenerationContext context,
-            CallbackInfoReturnable<Optional<GenerationStub>> cir) {
+    @Inject(method = "generatePieces", at = @At("HEAD"), cancellable = true, remap = false)
+    private static void custommeteor$disableVanillaMeteorite(StructurePiecesBuilder piecesBuilder,
+            GenerationContext context, CallbackInfo ci) {
         if (CustomMeteorConfig.disableVanillaMeteorite()) {
-            cir.setReturnValue(Optional.empty());
+            ci.cancel();
         }
     }
 
