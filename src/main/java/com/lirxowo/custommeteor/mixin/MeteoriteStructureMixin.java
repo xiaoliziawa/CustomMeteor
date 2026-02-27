@@ -1,11 +1,16 @@
 package com.lirxowo.custommeteor.mixin;
 
+import java.util.Optional;
+
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.levelgen.structure.Structure.GenerationContext;
+import net.minecraft.world.level.levelgen.structure.Structure.GenerationStub;
 import net.minecraft.world.level.levelgen.structure.pieces.StructurePiecesBuilder;
 
 import appeng.worldgen.meteorite.CraterType;
@@ -19,6 +24,14 @@ import net.minecraftforge.fml.ModList;
 
 @Mixin(value = MeteoriteStructure.class, remap = false)
 public class MeteoriteStructureMixin {
+    @Inject(method = "findGenerationPoint", at = @At("HEAD"), cancellable = true, remap = false)
+    private void custommeteor$disableVanillaMeteorite(GenerationContext context,
+            CallbackInfoReturnable<Optional<GenerationStub>> cir) {
+        if (CustomMeteorConfig.disableVanillaMeteorite()) {
+            cir.setReturnValue(Optional.empty());
+        }
+    }
+
     @Redirect(method = "generatePieces", remap = false, at = @At(value = "NEW",
             target = "Lappeng/worldgen/meteorite/MeteoriteStructurePiece;"))
     private static appeng.worldgen.meteorite.MeteoriteStructurePiece custommeteor$kubejsTerrain(BlockPos pos,
