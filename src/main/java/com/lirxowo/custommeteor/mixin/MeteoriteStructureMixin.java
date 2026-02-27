@@ -24,7 +24,7 @@ import net.minecraftforge.fml.ModList;
 
 @Mixin(value = MeteoriteStructure.class, remap = false)
 public class MeteoriteStructureMixin {
-    @Inject(method = "findGenerationPoint", at = @At("HEAD"), cancellable = true, remap = false)
+    @Inject(method = "findGenerationPoint", at = @At("HEAD"), cancellable = true)
     private void custommeteor$disableVanillaMeteorite(GenerationContext context,
             CallbackInfoReturnable<Optional<GenerationStub>> cir) {
         if (CustomMeteorConfig.disableVanillaMeteorite()) {
