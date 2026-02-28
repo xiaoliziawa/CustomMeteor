@@ -1,0 +1,19 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.lirxowo.custommeteor.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "MeteoriteStructureMixin",
+    "MeteorPlacerMixin",
+    "accessor.MeteoriteStructurePieceInvoker"
+  ],
+  "client": [
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "overwrites": {
+    "requireAnnotations": true
+  }
+}

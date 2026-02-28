@@ -1,0 +1,50 @@
+package com.lirxowo.custommeteor.config;
+
+import net.neoforged.neoforge.common.ModConfigSpec;
+
+public final class CustomMeteorConfig {
+    public static final ModConfigSpec SPEC;
+    public static final Common COMMON;
+
+    static {
+        ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
+        COMMON = new Common(builder);
+        SPEC = builder.build();
+    }
+
+    private CustomMeteorConfig() {
+    }
+
+    public static MeteoriteMode meteoriteMode() {
+        return COMMON.meteoriteMode.get();
+    }
+
+    public static boolean disableVanillaMeteorite() {
+        return COMMON.disableVanillaMeteorite.get();
+    }
+
+    public enum MeteoriteMode {
+        TEMPLATE,
+        PALETTE,
+        KUBEJS
+    }
+
+    public static final class Common {
+        public final ModConfigSpec.EnumValue<MeteoriteMode> meteoriteMode;
+        public final ModConfigSpec.BooleanValue disableVanillaMeteorite;
+
+        private Common(ModConfigSpec.Builder builder) {
+            builder.comment("Custom meteorite settings").push("meteorite");
+            meteoriteMode = builder
+                    .comment("TEMPLATE: use structure template custommeteor:ae2_meteorite if present.",
+                            "PALETTE: use block tags to customize meteorite composition.",
+                            "KUBEJS: read meteorite palette from KubeJS startup scripts (AE2MeteorEvent.create).")
+                    .defineEnum("mode", MeteoriteMode.TEMPLATE);
+            disableVanillaMeteorite = builder
+                    .comment("Set to true to completely disable AE2 vanilla meteorite generation.",
+                            "When enabled, no meteorites will spawn in the world at all.")
+                    .define("disableVanillaMeteorite", false);
+            builder.pop();
+        }
+    }
+}
